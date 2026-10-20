@@ -64,30 +64,61 @@
 
 ## 4. 安装
 
+安装过程不依赖任何脚本，仅包含两项操作：将 `SLManualSave.dll` 复制到插件目录；可选地向一个 HTML 文件追加一段代码。仓库中的脚本仅用于自动化重复操作，不是安装的必要条件。
+
 ### 4.1 前置条件
 
-1. 已安装 **BepInEx 6（IL2CPP，win-x64）** 至游戏根目录，并至少启动一次游戏以生成 `BepInEx\interop\`；
-2. 若需从源码编译，另需 .NET 6 SDK。
+- 已安装 **BepInEx 6（IL2CPP，win-x64）** 至游戏根目录；
+- 已至少启动一次游戏，使 `BepInEx\interop\` 生成完成（该过程通常需要数十秒）。
 
-### 4.2 安装步骤
+### 4.2 手动安装（默认方式）
+
+**步骤 1：部署插件**
+
+将 `dist\SLManualSave.dll` 复制到以下路径（`plugins` 目录不存在时自行创建）：
+
+```
+<游戏目录>\BepInEx\plugins\SLManualSave.dll
+```
+
+**步骤 2（可选）：添加暂停菜单入口**
+
+省略此步骤时，插件仍可通过 `F5` 创建存档槽，仅缺少菜单入口。
+
+1. 备份 `SurvivalLog_Data\StreamingAssets\WebUI\UI\OutSetting\OutSetting.html`；
+2. 以文本编辑器打开该文件；
+3. 将 `ui-patch\save_button.html` 的全部内容插入到文件中**最后一个** `</body>` 标签之前；
+4. 以 **UTF-8（无 BOM）** 编码保存。
+
+该文件本身为 UTF-8 无 BOM 编码；保存时应确认编码一致，否则界面文字可能显示异常。
+
+**步骤 3（可选）：校验文件完整性**
+
+`dist\SLManualSave.dll` 的 SHA-256：
+
+```
+9E60B623348787B05F377CAE48F4E66EC5331A24898288F25676355D93E877BD
+```
+
+### 4.3 脚本安装（可选）
+
+脚本适用于重复部署或需要还原界面补丁的场景：
 
 ```powershell
-# 1) 编译并部署插件
+# 编译并部署插件
 powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -GameDir "X:\...\Survival Log"
 
-# 2) 注入暂停菜单入口（可省略；省略时仅保留 F5 快捷键）
+# 注入暂停菜单入口（追加注入区块并备份原文件）
 powershell -ExecutionPolicy Bypass -File scripts\install-ui-patch.ps1 -GameDir "X:\...\Survival Log"
 ```
 
-说明：
+- `build.ps1` 编译 `src\SLManualSave` 并将产物复制到 `BepInEx\plugins\`；
+- `install-ui-patch.ps1` 追加界面区块，首次执行时生成 `OutSetting.html.orig`，具备幂等性（重复执行仅替换自身注入的区块）；
+- 若已设置环境变量 `SURVIVALLOG_DIR`，可省略 `-GameDir` 参数。
 
-- `build.ps1` 编译 `src\SLManualSave` 并将 `SLManualSave.dll` 复制至 `<游戏目录>\BepInEx\plugins\`；
-- `install-ui-patch.ps1` 在游戏自带的 `OutSetting.html` 末尾追加一个 `<script>` 块，并在首次执行时备份原文件为 `OutSetting.html.orig`；脚本具备幂等性，重复执行仅替换自身注入的区块；
-- 若游戏目录通过环境变量 `SURVIVALLOG_DIR` 指定，可省略 `-GameDir` 参数。
+### 4.4 界面补丁的维护
 
-### 4.3 界面补丁的维护
-
-游戏更新会覆盖 `OutSetting.html`，导致菜单入口消失。更新后重新执行 `install-ui-patch.ps1` 即可恢复；插件本体与快捷键不受影响。
+游戏更新会覆盖 `OutSetting.html`，导致菜单入口消失。更新后按 4.2 步骤 2 重新插入，或执行 `install-ui-patch.ps1`。插件本体与快捷键不受影响。
 
 ---
 
@@ -154,7 +185,7 @@ powershell -ExecutionPolicy Bypass -File tools\save_audit.ps1 -Action check
 
 | 现象 | 可能原因 | 处理 |
 |---|---|---|
-| 菜单中无入口 | 界面补丁缺失或被覆盖 | 重新执行 `install-ui-patch.ps1` |
+| 菜单中无入口 | 界面补丁缺失或被覆盖 | 按 4.2 步骤 2 重新插入，或执行 `install-ui-patch.ps1` |
 | 入口存在但无响应 | 插件未加载 | 检查日志是否包含插件加载记录 |
 | 命名输入框无法输入 | 键盘焦点未转交 | 日志应出现 `text input mode = True/False`，据此定位 |
 | 存档失败 | 前置校验未通过或文件写入失败 | 查看 `checkpoint failed at step '...'`，`step` 字段标识失败环节 |
@@ -165,13 +196,8 @@ powershell -ExecutionPolicy Bypass -File tools\save_audit.ps1 -Action check
 
 以下两项须同时执行，否则菜单入口会残留为无响应状态：
 
-```powershell
-# 1) 移除插件
-Remove-Item "<游戏目录>\BepInEx\plugins\SLManualSave.dll"
-
-# 2) 还原菜单页面
-powershell -ExecutionPolicy Bypass -File scripts\install-ui-patch.ps1 -GameDir "X:\...\Survival Log" -Restore
-```
+1. 删除 `<游戏目录>\BepInEx\plugins\SLManualSave.dll`；
+2. 还原菜单页面：将 `OutSetting.html.orig` 复制回 `OutSetting.html`（若安装时使用脚本，亦可执行 `install-ui-patch.ps1 -Restore`）。
 
 彻底移除 BepInEx：删除 `BepInEx\`、`dotnet\`、`winhttp.dll`、`doorstop_config.ini`、`.doorstop_version`。
 
