@@ -1,0 +1,136 @@
+<!-- === SL ManualSave injected block: begin === -->
+<script>
+(function () {
+  if (window.__slSaveInstalled) return;
+  window.__slSaveInstalled = true;
+
+  var PAGE_ID = 'OutSetting';
+  var BTN_ID = 'sl-save-btn';
+  var MODAL_ID = 'sl-save-modal';
+
+  function post(type, data) {
+    try {
+      window.parent.postMessage({ type: type, data: data || {}, sourcePageId: PAGE_ID }, '*');
+    } catch (e) {
+      console.error('[slsave] post failed', e);
+    }
+  }
+
+  function defaultName() {
+    var d = new Date();
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return '手动存档 ' + (d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function closeModal() {
+    post('SL_INPUT_FOCUS', { focused: false });
+    var m = document.getElementById(MODAL_ID);
+    if (m && m.parentNode) m.parentNode.removeChild(m);
+  }
+
+  function openModal() {
+    if (document.getElementById(MODAL_ID)) return;
+
+    var overlay = document.createElement('div');
+    overlay.id = MODAL_ID;
+    overlay.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.72);' +
+      'display:flex;align-items:center;justify-content:center;z-index:2147483000;';
+
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#17181a;border:1px solid #555;padding:22px 24px;min-width:440px;' +
+      'color:#eee;font-size:16px;box-shadow:0 8px 30px rgba(0,0,0,.6);';
+
+    var title = document.createElement('div');
+    title.textContent = '保存到新的存档位';
+    title.style.cssText = 'font-size:18px;margin-bottom:6px;';
+
+    var hint = document.createElement('div');
+    hint.textContent = '起个名字方便之后认出来（存档文件名仍按时间生成）';
+    hint.style.cssText = 'font-size:13px;color:#9aa0a6;margin-bottom:14px;';
+
+    var input = document.createElement('input');
+    input.id = 'sl-save-name';
+    input.type = 'text';
+    input.maxLength = 24;
+    input.value = defaultName();
+    input.className = 'unity-interactive';
+    input.style.cssText = 'width:100%;box-sizing:border-box;padding:10px 12px;font-size:16px;' +
+      'background:#0d0e10;border:1px solid #666;color:#fff;outline:none;';
+
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:12px;justify-content:flex-end;margin-top:18px;';
+
+    function mkBtn(text, primary) {
+      var b = document.createElement('div');
+      b.textContent = text;
+      b.style.cssText = 'padding:8px 20px;cursor:pointer;font-size:15px;border:1px solid #666;' +
+        'background:' + (primary ? '#2f6f4f' : '#2a2c30') + ';color:#fff;';
+      return b;
+    }
+
+    function submit() {
+      var name = (input.value || '').trim() || defaultName();
+      closeModal();
+      post('SAVE_MANUAL', { name: name });
+    }
+
+    var cancel = mkBtn('取消', false);
+    cancel.addEventListener('click', function (e) { e.stopPropagation(); closeModal(); });
+
+    var ok = mkBtn('保存', true);
+    ok.addEventListener('click', function (e) { e.stopPropagation(); submit(); });
+
+    input.addEventListener('keydown', function (e) {
+      e.stopPropagation();
+      if (e.key === 'Enter') submit();
+      else if (e.key === 'Escape') closeModal();
+    });
+
+    // tell Unity to route keyboard / IME into the webview while this field is focused
+    input.addEventListener('focus', function () { post('SL_INPUT_FOCUS', { focused: true }); });
+    input.addEventListener('blur', function () { post('SL_INPUT_FOCUS', { focused: false }); });
+
+    row.appendChild(cancel);
+    row.appendChild(ok);
+    box.appendChild(title);
+    box.appendChild(hint);
+    box.appendChild(input);
+    box.appendChild(row);
+    overlay.appendChild(box);
+    overlay.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+    document.body.appendChild(overlay);
+    setTimeout(function () { try { input.focus(); input.select(); } catch (e) {} }, 30);
+  }
+
+  function ensureButton() {
+    if (document.getElementById(BTN_ID)) return;
+    var exitBtn = document.querySelector('.main-btn.btn-exit');
+    if (!exitBtn || !exitBtn.parentNode) return;
+
+    var btn = document.createElement('div');
+    btn.id = BTN_ID;
+    btn.className = 'main-btn btn-sl-save';
+    btn.textContent = '保存游戏';
+    btn.style.cssText = 'margin-top:0;';
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openModal();
+    });
+    exitBtn.parentNode.insertBefore(btn, exitBtn);
+  }
+
+  function boot() {
+    ensureButton();
+    try {
+      new MutationObserver(function () { ensureButton(); })
+        .observe(document.body, { childList: true, subtree: true });
+    } catch (e) {
+      console.error('[slsave] observer failed', e);
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+<!-- === SL ManualSave injected block: end === -->

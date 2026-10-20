@@ -1,0 +1,20 @@
+# build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# local logs and audit artifacts
+*.log
+audit/
+manifest_*.csv
+saves_backup_*.zip
+watch_*.log
+
+# never commit game files or personal data
+*.bytes
+*.bytes.bak
+Saves/
+OutSetting.html
+OutSetting.html.orig
