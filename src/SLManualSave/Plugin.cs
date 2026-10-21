@@ -14,7 +14,7 @@ using Vuplex.WebView;
 
 namespace SLManualSave;
 
-[BepInPlugin("survivallog.manualsave", "SL Manual Save", "0.7.0")]
+[BepInPlugin("survivallog.manualsave", "SL Manual Save", "1.0.0")]
 public class Plugin : BasePlugin
 {
     internal static ManualLogSource Logger;
@@ -22,7 +22,7 @@ public class Plugin : BasePlugin
     public override void Load()
     {
         Logger = base.Log;
-        Logger.LogInfo("SLManualSave v0.7.0 loading");
+        Logger.LogInfo("SLManualSave v1.0.0 loading");
 
         ClassInjector.RegisterTypeInIl2Cpp<HotkeyMono>();
 
